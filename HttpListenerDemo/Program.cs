@@ -1,8 +1,5 @@
-﻿using System;
-using System.IO;
-using System.Text;
+﻿using System.Text;
 using System.Net;
-using System.Threading.Tasks;
 
 namespace HttpListenerDemo
 {
@@ -37,35 +34,38 @@ namespace HttpListenerDemo
                 // Will wait here until we hear from a connection
                 HttpListenerContext ctx = await listener.GetContextAsync();
 
-                // Peel out the requests and response objects
-                HttpListenerRequest req = ctx.Request;
-                HttpListenerResponse resp = ctx.Response;
-
-                // Print out some info about the request
-                Console.WriteLine($"Request #: {++requestCount}");
-                WriteRequestInfo(req);
-
-                // If `shutdown` url requested w/ POST, then shutdown the server after serving the page
-                if ((req.HttpMethod == "POST") && (req.Url.AbsolutePath == "/shutdown"))
+                Task.Run(async () =>
                 {
-                    Console.WriteLine("Shutdown requested");
-                    runServer = false;
-                }
+                    // Peel out the requests and response objects
+                    HttpListenerRequest req = ctx.Request;
+                    HttpListenerResponse resp = ctx.Response;
 
-                // Make sure we don't increment the page views counter if `favicon.ico` is requested
-                if (req.Url.AbsolutePath != "/favicon.ico")
-                    pageViews += 1;
+                    // Print out some info about the request
+                    Console.WriteLine($"Request #: {++requestCount}");
+                    WriteRequestInfo(req);
 
-                // Write the response info
-                string disableSubmit = !runServer ? "disabled" : "";
-                byte[] data = Encoding.UTF8.GetBytes(String.Format(pageData, pageViews, disableSubmit));
-                resp.ContentType = "text/html";
-                resp.ContentEncoding = Encoding.UTF8;
-                resp.ContentLength64 = data.LongLength;
+                    // If `shutdown` url requested w/ POST, then shutdown the server after serving the page
+                    if ((req.HttpMethod == "POST") && (req.Url.AbsolutePath == "/shutdown"))
+                    {
+                        Console.WriteLine("Shutdown requested");
+                        runServer = false;
+                    }
 
-                // Write out to the response stream (asynchronously), then close it
-                await resp.OutputStream.WriteAsync(data, 0, data.Length);
-                resp.Close();
+                    // Make sure we don't increment the page views counter if `favicon.ico` is requested
+                    if (req.Url.AbsolutePath != "/favicon.ico")
+                        pageViews += 1;
+
+                    // Write the response info
+                    string disableSubmit = !runServer ? "disabled" : "";
+                    byte[] data = Encoding.UTF8.GetBytes(String.Format(pageData, pageViews, disableSubmit));
+                    resp.ContentType = "text/html";
+                    resp.ContentEncoding = Encoding.UTF8;
+                    resp.ContentLength64 = data.LongLength;
+
+                    // Write out to the response stream (asynchronously), then close it
+                    await resp.OutputStream.WriteAsync(data, 0, data.Length);
+                    resp.Close();
+                });
             }
         }
 
